@@ -1,3 +1,5 @@
+import { Types } from 'mongoose';
+
 export interface IClient {
   _id?: string;
   nombre: string;
@@ -9,6 +11,7 @@ export interface IClient {
 }
 
 export interface IOrder {
+  _id: Types.ObjectId;
   numero_pedido: number;
   fecha_creacion: Date;
   fecha_entrega: Date;
