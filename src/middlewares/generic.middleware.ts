@@ -1,15 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { Model as MongooseModel, Document, Types } from 'mongoose';
 import { IClient } from '../interfaces/client.interface';
 
 interface BaseDocument extends Document {
+  _id: Types.ObjectId;
   componentes?: Types.DocumentArray<Document>;
   [key: string]: any;
 }
 
 type GenericMiddleware = (req: Request, res: Response, next: NextFunction) => Promise<void | Response>;
 
-const requestTime = (req: Request, _: Response, next: NextFunction): void => {
+const requestTime: RequestHandler = (req, _, next) => {
     console.log({ 
         url: req.url, 
         method: req.method, 
@@ -18,21 +19,28 @@ const requestTime = (req: Request, _: Response, next: NextFunction): void => {
     next();
 };
 
-const validateId = (Model: MongooseModel<BaseDocument>): GenericMiddleware => {
-    return async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
-        const _id = req.params.id;
+const validateId = (Model: MongooseModel<any>): RequestHandler => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        try {
+            const _id = req.params.id;
 
-        if (!Types.ObjectId.isValid(_id)) {
-            return res.status(400).send('ID no válido');
+            if (!Types.ObjectId.isValid(_id)) {
+                res.status(400).send('ID no válido');
+                return;
+            }
+
+            Model.findById(_id).then(model => {
+                if (!model) {
+                    res.status(404).send(`${Model.modelName} no encontrado`);
+                    return;
+                }
+                next();
+            }).catch(error => {
+                next(error);
+            });
+        } catch (error) {
+            next(error);
         }
-
-        const model = await Model.findById(_id);
-
-        if (!model) {
-            return res.status(404).send(`${Model.modelName} no encontrado`);
-        }
-
-        next();
     };
 };
 
